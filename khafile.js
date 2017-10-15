@@ -1,5 +1,7 @@
-let project = new Project('Empty');
-project.addAssets('assets/**');
+let project = new Project('Kode Project');
+
+project.addAssets('Assets/**');
+project.addShaders('Shaders/**');
 project.addSources('Sources');
 
 resolve(project);

@@ -1,5 +1,6 @@
 package;
 
+import papu.PAPU;
 import haxe.io.UInt8Array;
 
 /**
@@ -10,6 +11,8 @@ import haxe.io.UInt8Array;
 typedef HaxedNESConfig = {
 	var preferredFrameRate:Int;
 	var fpsInterval:Int;
+	var emulateSound:Bool;
+	var sampleRate:Int;
 }
  
 class NES {
@@ -18,6 +21,7 @@ class NES {
 	public var opts(default, null):HaxedNESConfig;
 	public var cpu(default, null):CPU;
 	public var ppu(default, null):PPU;
+	public var papu(default, null):PAPU;
 	public var mmap(default, null):MapperDefault;
 	public var rom(default, null):ROM;
 	public var isRunning(default, null):Bool;
@@ -38,7 +42,9 @@ class NES {
 		
 		opts = {
 			preferredFrameRate: 60,
-			fpsInterval: 500 // Time between updating FPS in ms
+			fpsInterval: 500, // Time between updating FPS in ms
+			emulateSound: false,
+			sampleRate: 44100 // Sound sample rate in hz	
 		};
 		
 		isRunning = false;
@@ -49,6 +55,7 @@ class NES {
 		
 		cpu = new CPU(this);
 		ppu = new PPU(this);
+		papu = new PAPU(this);
 		mmap = null; // set in loadRom()
 		input = new InputHandler(this);
 	}
@@ -60,6 +67,7 @@ class NES {
 		        
         cpu.reset();
         ppu.reset();
+		papu.reset();
     }
 	
 	public function start() {       
@@ -85,16 +93,25 @@ class NES {
 				if (cpu.cyclesToHalt == 0) {
 					// Execute a CPU instruction
 					cycles = cpu.emulate();
+					if (opts.emulateSound) {
+						papu.clockFrameCounter(cycles);
+					}
 					cycles *= 3;
 					
 				} 
 				else {
 					if (cpu.cyclesToHalt > 8) {
 						cycles = 24;
+						if (opts.emulateSound) {
+							papu.clockFrameCounter(8);
+						}
 						cpu.cyclesToHalt -= 8;
 					}
 					else {
 						cycles = cpu.cyclesToHalt * 3;
+						if (opts.emulateSound) {
+							papu.clockFrameCounter(cpu.cyclesToHalt);
+						}
 						cpu.cyclesToHalt = 0;
 					}
 				}				
@@ -162,6 +179,10 @@ class NES {
 		
         return rom.valid;
     }
+
+	public function writeAudio(samples:Array<Int>) {
+		// VK TODO:
+	}
 	    
     function resetFps() {
         lastFpsTime = 0;
